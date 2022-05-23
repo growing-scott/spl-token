@@ -5,6 +5,7 @@ import nacl from 'tweetnacl';
 import { clusterApiUrl, Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, Account, Transaction, sendAndConfirmTransaction, SystemProgram } from '@solana/web3.js';
 import * as splToken from '@solana/spl-token';
 import axios from 'axios';
+import { fromString } from 'uint8arrays/from-string'
 
 function App() {
 
@@ -27,12 +28,15 @@ function App() {
     useEffect(() => {
         // Solana 네트워크 연결
         setConnection(new Connection(
-            clusterApiUrl('devnet'),
+            clusterApiUrl('mainnet-beta'),
             'confirmed'
         ))
     },[])
 
     const createWallet = async () =>{
+
+
+
         const mnemonic = bip39.generateMnemonic();
         const seed = bip39.mnemonicToSeedSync(mnemonic); // prefer async mnemonicToSeed
         const keyPair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
@@ -42,11 +46,21 @@ function App() {
     }
 
     const importWallet = async () =>{
-        const seed = bip39.mnemonicToSeedSync(userMnemonic)
-        const seedKeyPair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
+        //const seed = bip39.mnemonicToSeedSync("village grocery pyramid finish enjoy badge ocean pyramid blood mean bike strong");
+        //const seedKeyPair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
+        //Keypair.fromSeed(fromString('village grocery pyramid finish enjoy badge ocean pyramid blood mean strong bike'))
+        //let key = Keypair.fromSeed(fromString('village grocery pyramid finish enjoy badge ocean pyramid blood mean strong bike'));
+        //console.log(PublicKey.isOnCurve(key.publicKey));
+
+        console.log(bip39.validateMnemonic(userMnemonic));
+
+        //let secretKey = Uint8Array.from([5,221,176,230,254,69,103,184,153,84,150,59,138,40,111,219,93,34,136,14,244,178,202,137,112,8,101,28,171,5,229,103,159,238,232,213,246,21,121,194,221,35,174,95,162,83,22,123,5,30,25,136,91,112,103,54,145,65,132,129,121,206,27,255]);
+        //let wallet = Keypair.fromSecretKey(secretKey);
+        /*
         const wallet = Keypair.fromSecretKey(seedKeyPair.secretKey);
         setWallet(wallet);
         setUserAddress(wallet.publicKey.toBase58());
+         */
     }
 
     const getBalance = async () =>{

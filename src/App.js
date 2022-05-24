@@ -5,6 +5,7 @@ import nacl from 'tweetnacl';
 import { clusterApiUrl, Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, Account, Transaction, sendAndConfirmTransaction, SystemProgram } from '@solana/web3.js';
 import * as splToken from '@solana/spl-token';
 import axios from 'axios';
+import { derivePath } from "ed25519-hd-key";
 import { fromString } from 'uint8arrays/from-string'
 
 function App() {
@@ -28,32 +29,71 @@ function App() {
     useEffect(() => {
         // Solana 네트워크 연결
         setConnection(new Connection(
-            clusterApiUrl('mainnet-beta'),
+            //clusterApiUrl('mainnet-beta'),
+            clusterApiUrl('devnet'),
             'confirmed'
         ))
     },[])
 
     const createWallet = async () =>{
-
-
-
         const mnemonic = bip39.generateMnemonic();
-        const seed = bip39.mnemonicToSeedSync(mnemonic); // prefer async mnemonicToSeed
-        const keyPair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
+        const seed = bip39.mnemonicToSeedSync(mnemonic, ''); // prefer async mnemonicToSeed
+        //const keyPair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
+
+        // BIP44
+        const keyPair = Keypair.fromSeed(derivePath(`m/44'/501'/0'/0'`, seed.toString("hex")).key);
         const account = new Account(keyPair.secretKey);
         setMnemonic(mnemonic);
         setAddress(account.publicKey.toBase58());
     }
 
     const importWallet = async () =>{
-        //const seed = bip39.mnemonicToSeedSync("village grocery pyramid finish enjoy badge ocean pyramid blood mean bike strong");
-        //const seedKeyPair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
-        //Keypair.fromSeed(fromString('village grocery pyramid finish enjoy badge ocean pyramid blood mean strong bike'))
-        //let key = Keypair.fromSeed(fromString('village grocery pyramid finish enjoy badge ocean pyramid blood mean strong bike'));
-        //console.log(PublicKey.isOnCurve(key.publicKey));
+        const keypairs = [];
+        const accounts = [];
+        if (bip39.validateMnemonic(userMnemonic)) {
+            const seed = bip39.mnemonicToSeedSync(userMnemonic, ''); // prefer async mnemonicToSeed
 
-        console.log(bip39.validateMnemonic(userMnemonic));
+            const bip39KeyPair = Keypair.fromSecretKey(nacl.sign.keyPair.fromSeed(seed.slice(0, 32)).secretKey);
+            keypairs.push(bip39KeyPair);
+            accounts.push(bip39KeyPair.publicKey);
+            console.log(`bip39KeyPair => ${bip39KeyPair.publicKey.toBase58()}`);
 
+            for (let i = 0; i < 10; i++) {
+                const path = `m/44'/501'/0'/${i}'`;
+                const keypair = Keypair.fromSeed(derivePath(path, seed.toString("hex")).key);
+                console.log(`${path} => ${keypair.publicKey.toBase58()}`);
+                keypairs.push(keypair);
+                accounts.push(keypair.publicKey);
+            }
+
+            for (let i = 0; i < 10; i++) {
+                const path = `m/44'/501'/${i}'/0'`;
+                const keypair = Keypair.fromSeed(derivePath(path, seed.toString("hex")).key);
+                console.log(`${path} => ${keypair.publicKey.toBase58()}`);
+                keypairs.push(keypair);
+                accounts.push(keypair.publicKey);
+            }
+
+            const accountsInfo = await connection.getMultipleAccountsInfo(accounts);
+            console.log(accountsInfo);
+            const availAccount = [];
+            accountsInfo.forEach((account, i) => {
+                if (account != null) {
+                    console.log(account.owner.toBase58());
+                    console.log(keypairs[i]);
+                    availAccount.push(keypairs[i]);
+                }
+            })
+
+            console.log('availAccount: ', availAccount.length);
+
+            let wallet = Keypair.fromSeed(derivePath(`m/44'/501'/0'/0'`, seed.toString("hex")).key);
+            if (availAccount.length > 0) {
+                wallet = availAccount[0];
+            }
+            setWallet(wallet);
+            setUserAddress(wallet.publicKey.toBase58());
+        }
         //let secretKey = Uint8Array.from([5,221,176,230,254,69,103,184,153,84,150,59,138,40,111,219,93,34,136,14,244,178,202,137,112,8,101,28,171,5,229,103,159,238,232,213,246,21,121,194,221,35,174,95,162,83,22,123,5,30,25,136,91,112,103,54,145,65,132,129,121,206,27,255]);
         //let wallet = Keypair.fromSecretKey(secretKey);
         /*
@@ -251,6 +291,7 @@ function App() {
         }
 
         const response = await axios.post( 'https://api.devnet.solana.com', data, {
+        //const response = await axios.post( 'https://api.mainnet-beta.solana.com', data, {
             headers:{
                 'Content-type': 'application/json',
                 'Accept': 'application/json'

@@ -11,6 +11,7 @@
     "axios": "^0.21.4",
     "bip39": "^3.0.4",
     "customize-cra": "^1.0.0",
+    "ed25519-hd-key": "^1.2.0",
     "react": "^18.1.0",
     "react-app-rewired": "^2.2.1",
     "react-dom": "^18.1.0",

@@ -6,7 +6,12 @@ import { clusterApiUrl, Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, Accoun
 import * as splToken from '@solana/spl-token';
 import axios from 'axios';
 import { derivePath } from "ed25519-hd-key";
-import { fromString } from 'uint8arrays/from-string'
+import crypto from "crypto";
+import util from "util";
+
+const randomBytesPromise = util.promisify(crypto.randomBytes);
+const pbkdf2Promise = util.promisify(crypto.pbkdf2);
+const loop = 104901;
 
 function App() {
 
@@ -25,6 +30,8 @@ function App() {
     const [transactionId, setTransactionId] = useState()
     const [transactions, setTransactions] = useState([])
     const [tokens, setTokens] = useState([])
+    const [password, setPassword] = useState(null)
+    const [walletPassword, setWalletPassword] = useState(null)
 
     useEffect(() => {
         // Solana 네트워크 연결
@@ -79,7 +86,6 @@ function App() {
             const availAccount = [];
             accountsInfo.forEach((account, i) => {
                 if (account != null) {
-                    console.log(account.owner.toBase58());
                     console.log(keypairs[i]);
                     availAccount.push(keypairs[i]);
                 }
@@ -301,6 +307,68 @@ function App() {
         setTokens(response.data.result);
     }
 
+    const putWalletPassword = async () => {
+        if (password) {
+            const hashedText = await getHashedValue(password);
+            const encryptMnemonic = cipher(userMnemonic, hashedText.substring(0, 16));
+
+            window.localStorage.setItem('secure', hashedText);
+            window.localStorage.setItem('data', encryptMnemonic);
+        }
+    }
+
+    const postLoginWalletPassword = async () => {
+        const secure = window.localStorage.getItem('secure');
+        const data = window.localStorage.getItem('data');
+
+        if (secure == null || data == null) {
+            console.log('No wallet password.');
+            return;
+        }
+        if (walletPassword) {
+            const hashedText = await getHashedValue(walletPassword);
+            if (hashedText !== secure) {
+                console.log('Password incorrect.');
+                return;
+            }
+            console.log('Password correct.')
+            const userMnemonic = decipher(data, hashedText.substring(0, 16));
+            setUserMnemonic(userMnemonic);
+            await importWallet();
+        }
+    }
+
+    const postLogout = () => {
+        window.localStorage.removeItem('secure');
+        window.localStorage.removeItem('data');
+        setUserMnemonic(null);
+        setWallet(null);
+        setUserAddress(null);
+    }
+
+    // 해시값
+    const getHashedValue = async (text) => {
+        const key = await pbkdf2Promise(text, "", loop, 64, "sha512");
+        return key.toString("base64");
+    }
+
+    // 암호화
+    const cipher = (text, key) => {
+        const encrypt = crypto.createCipheriv('aes-128-ecb', key, '')
+        const encryptResult = encrypt.update(text, 'utf8', 'base64') + encrypt.final('base64')
+        console.log(encryptResult)
+        return encryptResult
+    }
+
+    // 복호화
+    const decipher = (text, key) => {
+        const decode = crypto.createDecipheriv('aes-128-ecb', key, '')
+        const decodeResult = decode.update(text, 'base64', 'utf8') + decode.final('utf8')
+        console.log(decodeResult)
+        return decodeResult;
+    }
+
+
     const onChangeMnemonic = (e) => {
         const { name, value }  = e.target;
         setUserMnemonic(value);
@@ -314,6 +382,16 @@ function App() {
     const onChangeToAddress = (e) => {
         const { name, value }  = e.target;
         setToAddress(value);
+    }
+
+    const onChangePassword = (e) => {
+        const { name, value }  = e.target;
+        setPassword(value);
+    }
+
+    const onChangeWalletPassword = (e) => {
+        const { name, value }  = e.target;
+        setWalletPassword(value);
     }
 
     return (
@@ -378,6 +456,21 @@ function App() {
                         </div>
                     ))}
                 </div>
+            </div>
+            <div className="contents">
+                <button onClick={putWalletPassword}>지갑 패스워드 설정</button>
+                <div>
+                    <input name="password" placeholder="Password" style={{width: 500}} onChange={onChangePassword} />
+                </div>
+            </div>
+            <div className="contents">
+                <button onClick={postLoginWalletPassword}>지갑 패스워드 로그인</button>
+                <div>
+                    <input name="walletPassword" placeholder="Password" style={{width: 500}} onChange={onChangeWalletPassword} />
+                </div>
+            </div>
+            <div className="contents">
+                <button onClick={postLogout}>지갑 로그아웃</button>
             </div>
         </div>
     );

@@ -26,12 +26,13 @@ function App() {
     const [tokenAddress, setTokenAddress] = useState("AnqSrWGXn5JmSicpezJaEBYkJ1FTt9bu3rfZKXYcxxQV")
     const [amount, setAmount] = useState()
     const [balanceMintToken, setBalanceMintToken] = useState()
-    const [toAddress, setToAddress] = useState()
+    const [toAddress, setToAddress] = useState("tw1X1Si5MHJnUBEsWdQ37Tpi7YzPVNmoKSK2HVgpHH3")
     const [transactionId, setTransactionId] = useState()
     const [transactions, setTransactions] = useState([])
     const [tokens, setTokens] = useState([])
     const [password, setPassword] = useState(null)
     const [walletPassword, setWalletPassword] = useState(null)
+    const [fee, setFee] = useState(null)
 
     useEffect(() => {
         // Solana 네트워크 연결
@@ -368,6 +369,30 @@ function App() {
         return decodeResult;
     }
 
+    const getTransactionFee = async () => {
+        // 솔라나 토큰 Transaction Fee
+        let transaction = new Transaction().add(
+            SystemProgram.transfer({
+                fromPubkey: wallet.publicKey,
+                toPubkey: new PublicKey(toAddress),
+                lamports: LAMPORTS_PER_SOL //Investing 1 SOL. Remember 1 Lamport = 10^-9 SOL.
+            }),
+        );
+
+        let responseBlockhash = await connection.getLatestBlockhash('finalized');
+        console.log(responseBlockhash);
+        transaction.recentBlockhash = responseBlockhash.blockhash;
+        transaction.feePayer = wallet.publicKey;
+        console.log(transaction);
+        const response = await connection.getFeeForMessage(
+            transaction.compileMessage(),
+            'confirmed',
+        );
+
+        console.log('Fee', response.value);
+        setFee(response.value);
+    }
+
 
     const onChangeMnemonic = (e) => {
         const { name, value }  = e.target;
@@ -471,6 +496,10 @@ function App() {
             </div>
             <div className="contents">
                 <button onClick={postLogout}>지갑 로그아웃</button>
+            </div>
+            <div className="contents">
+                <button onClick={getTransactionFee}>Fee</button>
+                <div>{fee}</div>
             </div>
         </div>
     );

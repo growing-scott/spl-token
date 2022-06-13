@@ -46,6 +46,7 @@ async function unlock(connection, programId, seedWord, mintAddress) {
     const vestingInfo = await getContractInfo(connection, vestingAccountKey);
     console.log('vestingInfo', vestingInfo, vestingInfo.destinationAddress.toBase58());
     console.log('programId', programId.toBase58());
+    console.log('contract ID: ', bs58_1.default.encode(seedWord));
     let instruction = [
         instructions_1.createUnlockInstruction(programId, spl_token_1.TOKEN_PROGRAM_ID, web3_js_1.SYSVAR_CLOCK_PUBKEY, vestingAccountKey, vestingTokenAccountKey, vestingInfo.destinationAddress, [seedWord]),
     ];

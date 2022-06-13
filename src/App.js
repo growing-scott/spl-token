@@ -406,11 +406,12 @@ function App() {
 
     const postTokenLockup = async () => {
         const seed = generateRandomSeed(); // prefer async mnemonicToSeed
+        //const seed = 'asdacvqwasda321321435';
         console.log('seed', seed);
         const program = new PublicKey(programId);
         const destination = new PublicKey(toAddress)
 
-        const schedule = new Schedule(new Numberu64(new Date(2022, 6).getTime() / 1000), new Numberu64(3 * Math.pow(10, 3)));
+        const schedule = new Schedule(new Numberu64(new Date(2022, 5).getTime() / 1000), new Numberu64(3 * Math.pow(10, 3)));
 
         const instruction = await create(connection, program, Buffer.from(seed), wallet.publicKey, wallet.publicKey, new PublicKey('B6jV8pVcHQ9fMaiN4TVMWqBtJCXh2UBjbjyyV9Bya5gb'), destination, new PublicKey('HoD1cWgYJffakPy3b92y3MSBEzje1ZM9826QdKjGtuE8'), [schedule]);
         console.log(instruction);
@@ -426,12 +427,12 @@ function App() {
     }
 
     const postTokenUnlock = async () => {
-        const seed = bip39.mnemonicToSeedSync('update system come swap neglect pole layer lock there ball spawn twenty', ''); // prefer async mnemonicToSeed
-        //const seed = '2431313563509135536183773258942763207900515310900859339176095883'
+        //const seed = bip39.mnemonicToSeedSync('update system come swap neglect pole layer lock there ball spawn twenty', ''); // prefer async mnemonicToSeed
+        const seed = '852796950078475383303924820497854'
         const program = new PublicKey(programId);
         const mint = new PublicKey('HoD1cWgYJffakPy3b92y3MSBEzje1ZM9826QdKjGtuE8')
 
-        const instruction = await unlock(connection, program, seed, mint);
+        const instruction = await unlock(connection, program, Buffer.from(seed), mint);
         console.log(instruction);
 
         const tx = await signTransactionInstructions(

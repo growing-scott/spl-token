@@ -87,7 +87,7 @@ exports.ASSOCIATED_TOKEN_PROGRAM_ID = new web3_js_1.PublicKey('ATokenGPvbdGVxr1b
 const generateRandomSeed = () => {
     // Generate a random seed
     let seed = '';
-    for (let i = 0; i < 64; i++) {
+    for (let i = 0; i < 33; i++) {
         seed += Math.floor(Math.random() * 10);
     }
     return seed;

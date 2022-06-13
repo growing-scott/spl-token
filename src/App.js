@@ -8,6 +8,9 @@ import axios from 'axios';
 import { derivePath } from "ed25519-hd-key";
 import crypto from "crypto";
 import util from "util";
+import {create, unlock} from './token-investing/main.js';
+import {Schedule} from "./token-investing/state";
+import {generateRandomSeed, Numberu64, signTransactionInstructions} from "./token-investing/utils";
 
 const randomBytesPromise = util.promisify(crypto.randomBytes);
 const pbkdf2Promise = util.promisify(crypto.pbkdf2);
@@ -20,7 +23,10 @@ function App() {
     const [address, setAddress] = useState()
 
     const [wallet, setWallet] = useState()
-    const [userMnemonic, setUserMnemonic] = useState("pencil range middle satisfy south mosquito appear next recipe raise march fuel")
+    //const [userMnemonic, setUserMnemonic] = useState("pencil range middle satisfy south mosquito appear next recipe raise march fuel")
+
+    // Vesting Owner
+    const [userMnemonic, setUserMnemonic] = useState("alien symptom hip grace physical filter oil soul acid famous acquire napkin")
     const [userAddress, setUserAddress] = useState()
     const [balance, setBalance] = useState()
     const [tokenAddress, setTokenAddress] = useState("AnqSrWGXn5JmSicpezJaEBYkJ1FTt9bu3rfZKXYcxxQV")
@@ -33,6 +39,7 @@ function App() {
     const [password, setPassword] = useState(null)
     const [walletPassword, setWalletPassword] = useState(null)
     const [fee, setFee] = useState(null)
+    const [programId, setProgramId] = useState('8HJvpXrfRtcVDWQ6CCjpNmoyBEbGzfLEAg2EKQCZuc6h');
 
     useEffect(() => {
         // Solana 네트워크 연결
@@ -41,9 +48,9 @@ function App() {
             clusterApiUrl('devnet'),
             'confirmed'
         ))
-    },[])
+    }, [])
 
-    const createWallet = async () =>{
+    const createWallet = async () => {
         const mnemonic = bip39.generateMnemonic();
         const seed = bip39.mnemonicToSeedSync(mnemonic, ''); // prefer async mnemonicToSeed
         //const keyPair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
@@ -55,7 +62,7 @@ function App() {
         setAddress(account.publicKey.toBase58());
     }
 
-    const importWallet = async () =>{
+    const importWallet = async () => {
         const keypairs = [];
         const accounts = [];
         if (bip39.validateMnemonic(userMnemonic)) {
@@ -110,7 +117,7 @@ function App() {
          */
     }
 
-    const getBalance = async () =>{
+    const getBalance = async () => {
         if (wallet) {
             console.log(wallet);
             console.log(connection);
@@ -119,14 +126,14 @@ function App() {
         }
     }
 
-    const postAirdrop = async () =>{
+    const postAirdrop = async () => {
         if (wallet) {
             const airdropSignature = await connection.requestAirdrop(wallet.publicKey, LAMPORTS_PER_SOL);
             await connection.confirmTransaction(airdropSignature);
         }
     }
 
-    const createToken = async () =>{
+    const createToken = async () => {
         if (wallet) {
             const mint = await splToken.createMint(connection, wallet, wallet.publicKey, wallet.publicKey, 8);
             setTokenAddress(mint.toBase58());
@@ -138,7 +145,7 @@ function App() {
         }
     }
 
-    const toMintToken = async () =>{
+    const toMintToken = async () => {
         if (wallet) {
             const mint = new PublicKey(tokenAddress)
             console.log(mint);
@@ -163,7 +170,7 @@ function App() {
         }
     }
 
-    const getBalanceMintToken = async () =>{
+    const getBalanceMintToken = async () => {
         if (wallet) {
             const mint = new PublicKey(tokenAddress)
             console.log(mint);
@@ -185,7 +192,7 @@ function App() {
         }
     }
 
-    const postBurnToken = async () =>{
+    const postBurnToken = async () => {
         if (wallet) {
             const mint = new PublicKey(tokenAddress)
 
@@ -232,12 +239,15 @@ function App() {
             wallet.publicKey
         )
 
+        /*
         const toAccount = await splToken.getOrCreateAssociatedTokenAccount(
             connection,
             wallet,
             mint,
             new PublicKey(toAddress)
         )
+         */
+        const toAccount = new PublicKey(tokenAddress);
 
         console.log(mint, fromAccount, toAccount);
 
@@ -245,7 +255,7 @@ function App() {
             connection,
             wallet,
             fromAccount.address,
-            toAccount.address,
+            toAccount,
             wallet,
             1
         );
@@ -297,12 +307,13 @@ function App() {
             ]
         }
 
-        const response = await axios.post( 'https://api.devnet.solana.com', data, {
-        //const response = await axios.post( 'https://api.mainnet-beta.solana.com', data, {
-            headers:{
-                'Content-type': 'application/json',
-                'Accept': 'application/json'
-            }}
+        const response = await axios.post('https://api.devnet.solana.com', data, {
+                //const response = await axios.post( 'https://api.mainnet-beta.solana.com', data, {
+                headers: {
+                    'Content-type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            }
         )
         console.log(response);
         setTokens(response.data.result);
@@ -393,6 +404,61 @@ function App() {
         setFee(response.value);
     }
 
+    const postTokenLockup = async () => {
+        const seed = generateRandomSeed(); // prefer async mnemonicToSeed
+        console.log('seed', seed);
+        const program = new PublicKey(programId);
+        const destination = new PublicKey(toAddress)
+
+        const schedule = new Schedule(new Numberu64(new Date(2022, 6).getTime() / 1000), new Numberu64(3 * Math.pow(10, 3)));
+
+        const instruction = await create(connection, program, Buffer.from(seed), wallet.publicKey, wallet.publicKey, new PublicKey('B6jV8pVcHQ9fMaiN4TVMWqBtJCXh2UBjbjyyV9Bya5gb'), destination, new PublicKey('HoD1cWgYJffakPy3b92y3MSBEzje1ZM9826QdKjGtuE8'), [schedule]);
+        console.log(instruction);
+
+        const tx = await signTransactionInstructions(
+            connection,
+            [wallet],
+            wallet.publicKey,
+            instruction,
+        );
+
+        console.log(`Transaction: ${tx}`);
+    }
+
+    const postTokenUnlock = async () => {
+        const seed = bip39.mnemonicToSeedSync('update system come swap neglect pole layer lock there ball spawn twenty', ''); // prefer async mnemonicToSeed
+        //const seed = '2431313563509135536183773258942763207900515310900859339176095883'
+        const program = new PublicKey(programId);
+        const mint = new PublicKey('HoD1cWgYJffakPy3b92y3MSBEzje1ZM9826QdKjGtuE8')
+
+        const instruction = await unlock(connection, program, seed, mint);
+        console.log(instruction);
+
+        const tx = await signTransactionInstructions(
+            connection,
+            [wallet],
+            wallet.publicKey,
+            instruction,
+        );
+
+        /*
+        // Create Simple Transaction
+        let recentBlockhash = await connection.getRecentBlockhash();
+        let transaction = new Transaction({
+            recentBlockhash: recentBlockhash.blockhash,
+            feePayer: wallet.publicKey
+        });
+
+// Add an instruction to execute
+        transaction.add(...instruction);
+
+// Send and confirm transaction
+// Note: feePayer is by default the first signer, or payer, if the parameter is not set
+        const tx = await sendAndConfirmTransaction(connection, transaction, [wallet])
+         */
+
+        console.log(`Transaction: ${tx}`);
+    }
 
     const onChangeMnemonic = (e) => {
         const { name, value }  = e.target;
@@ -500,6 +566,12 @@ function App() {
             <div className="contents">
                 <button onClick={getTransactionFee}>Fee</button>
                 <div>{fee}</div>
+            </div>
+            <div className="contents">
+                <button onClick={postTokenLockup}>Token Lockup</button>
+            </div>
+            <div className="contents">
+                <button onClick={postTokenUnlock}>Token Unlock</button>
             </div>
         </div>
     );

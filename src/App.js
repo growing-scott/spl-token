@@ -11,6 +11,7 @@ import util from "util";
 import {create, unlock} from './token-investing/main.js';
 import {Schedule} from "./token-investing/state";
 import {generateRandomSeed, Numberu64, signTransactionInstructions} from "./token-investing/utils";
+import {Link} from "react-router-dom";
 
 const randomBytesPromise = util.promisify(crypto.randomBytes);
 const pbkdf2Promise = util.promisify(crypto.pbkdf2);
@@ -568,12 +569,7 @@ function App() {
                 <button onClick={getTransactionFee}>Fee</button>
                 <div>{fee}</div>
             </div>
-            <div className="contents">
-                <button onClick={postTokenLockup}>Token Lockup</button>
-            </div>
-            <div className="contents">
-                <button onClick={postTokenUnlock}>Token Unlock</button>
-            </div>
+            <Link to="/vesting">토큰 인베스팅</Link> |{" "}
         </div>
     );
 }

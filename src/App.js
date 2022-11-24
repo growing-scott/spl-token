@@ -19,7 +19,22 @@ const loop = 104901;
 
 function App() {
 
-    const [connection, setConnection] = useState()
+  /**
+   *
+   * —————————————————————————————————————————
+   *
+   * mnemonic: win interest pave move ordinary transfer height busy rookie fly cabbage twin
+   * address: GiBBgfpQLX28MZiuE27w22g82Yv4qi5ssfzg6Re7tfVd
+   * Token: Co58vLfC7ESdFBxqxB7rLznbSJqUr24CyjgJBdkrVLxp
+   *
+   * 이전
+   * mnemonic: marriage noodle acid wash joke foster galaxy scan release option wagon pair
+   * address: 5kWASz9uc4PATjPACxpH38hnWno5dXLQDdVDrmh7N6YN
+   *
+   *
+   */
+
+  const [connection, setConnection] = useState()
     const [mnemonic, setMnemonic] = useState()
     const [address, setAddress] = useState()
 
@@ -27,13 +42,16 @@ function App() {
     //const [userMnemonic, setUserMnemonic] = useState("pencil range middle satisfy south mosquito appear next recipe raise march fuel")
 
     // Vesting Owner
-    const [userMnemonic, setUserMnemonic] = useState("alien symptom hip grace physical filter oil soul acid famous acquire napkin")
+    const [userMnemonic, setUserMnemonic] = useState("vendor cluster engine exercise equal release paper globe hint sausage plunge loop")
     const [userAddress, setUserAddress] = useState()
     const [balance, setBalance] = useState()
-    const [tokenAddress, setTokenAddress] = useState("AnqSrWGXn5JmSicpezJaEBYkJ1FTt9bu3rfZKXYcxxQV")
+    //const [tokenAddress, setTokenAddress] = useState("AnqSrWGXn5JmSicpezJaEBYkJ1FTt9bu3rfZKXYcxxQV")
+    const [tokenAddress, setTokenAddress] = useState("Co58vLfC7ESdFBxqxB7rLznbSJqUr24CyjgJBdkrVLxp")
+
     const [amount, setAmount] = useState()
     const [balanceMintToken, setBalanceMintToken] = useState()
     const [toAddress, setToAddress] = useState("tw1X1Si5MHJnUBEsWdQ37Tpi7YzPVNmoKSK2HVgpHH3")
+    const [delegateAddress, setDelegateAddress] = useState("HYjCTtP55ZJaG2Q7qYcVQWQma5a7SrzfRrY3W568So75")
     const [transactionId, setTransactionId] = useState()
     const [transactions, setTransactions] = useState([])
     const [tokens, setTokens] = useState([])
@@ -148,26 +166,34 @@ function App() {
 
     const toMintToken = async () => {
         if (wallet) {
-            const mint = new PublicKey(tokenAddress)
-            console.log(mint);
+            try {
+              const mint = new PublicKey(tokenAddress)
+              console.log(mint);
 
-            const tokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
+              /*
+              const tokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
                 connection,
                 wallet,
                 mint,
                 wallet.publicKey
-            )
+              )
+               */
 
-            console.log(tokenAccount);
+              const tokenAccount = new PublicKey("8Vt9PaoTUZayZjzvn2wuFZTx8WmXMAyAB9SieM5tnkdc")
 
-            await splToken.mintTo(
+              console.log(tokenAccount);
+
+              await splToken.mintTo(
                 connection,
                 wallet,
                 mint,
-                tokenAccount.address,
+                tokenAccount,
                 wallet,
                 amount,
-            )
+              )
+            } catch (e) {
+              console.log(e);
+            }
         }
     }
 
@@ -230,33 +256,68 @@ function App() {
         await sendAndConfirmTransaction(connection, transaction, [wallet]);
     }
 
+    const postDelegateMintToken = async () => {
+      const mint = new PublicKey(tokenAddress);
+      const delegateAccount = new PublicKey(delegateAddress);
+
+      const tokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
+        connection,
+        wallet,
+        mint,
+        wallet.publicKey
+      )
+
+
+      const delegateTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
+        connection,
+        wallet,
+        mint,
+        delegateAccount
+      )
+
+      console.log(tokenAccount.address.toBase58());
+      console.log(delegateTokenAccount.address.toBase58());
+
+      let transaction = new Transaction()
+        .add(splToken.createSetAuthorityInstruction(
+          tokenAccount.address,
+          wallet.publicKey,
+          splToken.AuthorityType.AccountOwner,
+          delegateAccount
+        ));
+
+      await sendAndConfirmTransaction(connection, transaction, [wallet]);
+    }
+
     const postTransferToken = async () => {
         const mint = new PublicKey(tokenAddress);
 
-        const fromAccount = await splToken.getOrCreateAssociatedTokenAccount(
+        /*const fromAccount = await splToken.getOrCreateAssociatedTokenAccount(
             connection,
             wallet,
             mint,
             wallet.publicKey
-        )
+        )*/
 
-        /*
+        const fromAccount = new PublicKey("8Vt9PaoTUZayZjzvn2wuFZTx8WmXMAyAB9SieM5tnkdc");
+
+
         const toAccount = await splToken.getOrCreateAssociatedTokenAccount(
             connection,
             wallet,
             mint,
             new PublicKey(toAddress)
         )
-         */
-        const toAccount = new PublicKey(tokenAddress);
+
+        //const toAccount = new PublicKey(tokenAddress);
 
         console.log(mint, fromAccount, toAccount);
 
         const transaction = await splToken.transfer(
             connection,
             wallet,
-            fromAccount.address,
-            toAccount,
+            fromAccount,
+            toAccount.address,
             wallet,
             1
         );
@@ -477,6 +538,11 @@ function App() {
         setToAddress(value);
     }
 
+    const onChangeDelegateAddress = (e) => {
+      const { name, value }  = e.target;
+      setDelegateAddress(value);
+    }
+
     const onChangePassword = (e) => {
         const { name, value }  = e.target;
         setPassword(value);
@@ -529,6 +595,10 @@ function App() {
                 <button onClick={postTransferToken}>발행한 토큰 전송 - 1개</button>
                 <input name="toAddress" placeholder="Address" style={{width: 500}} onChange={onChangeToAddress} />
                 <div>transaction: {transactionId}</div>
+            </div>
+            <div className="contents">
+              <button onClick={postDelegateMintToken}>토큰 권한 이전</button>
+              <input name="delegateAddress" placeholder="Address" style={{width: 500}} onChange={onChangeDelegateAddress} />
             </div>
             <div className="contents">
                 <button onClick={getTransactions}>트랜잭션 조회</button>

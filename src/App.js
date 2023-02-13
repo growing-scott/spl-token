@@ -46,11 +46,11 @@ function App() {
     const [userAddress, setUserAddress] = useState()
     const [balance, setBalance] = useState()
     //const [tokenAddress, setTokenAddress] = useState("AnqSrWGXn5JmSicpezJaEBYkJ1FTt9bu3rfZKXYcxxQV")
-    const [tokenAddress, setTokenAddress] = useState("Co58vLfC7ESdFBxqxB7rLznbSJqUr24CyjgJBdkrVLxp")
+    const [tokenAddress, setTokenAddress] = useState("9TuCLrnSUt2iX6tccPEHSLgUMDg3VpkoEazU5CED3MyX")
 
     const [amount, setAmount] = useState()
     const [balanceMintToken, setBalanceMintToken] = useState()
-    const [toAddress, setToAddress] = useState("tw1X1Si5MHJnUBEsWdQ37Tpi7YzPVNmoKSK2HVgpHH3")
+    const [toAddress, setToAddress] = useState("6BufeZ6DFnpjn4KLG5gfe3DLAVAoS3imQxYBP6DzbMBg")
     const [delegateAddress, setDelegateAddress] = useState("HYjCTtP55ZJaG2Q7qYcVQWQma5a7SrzfRrY3W568So75")
     const [transactionId, setTransactionId] = useState()
     const [transactions, setTransactions] = useState([])
@@ -59,6 +59,11 @@ function App() {
     const [walletPassword, setWalletPassword] = useState(null)
     const [fee, setFee] = useState(null)
     const [programId, setProgramId] = useState('8HJvpXrfRtcVDWQ6CCjpNmoyBEbGzfLEAg2EKQCZuc6h');
+
+    const [tokenName, setTokenName] = useState('TKANMSW')
+    const [tokenSymbol, setTokenSymbol] = useState('TKAN')
+    const [tokenDescription, setTokenDescription] = useState('유틸리티 토큰')
+    const [tokenImage, setTokenImage] = useState('https://media.istockphoto.com/id/1190369461/vector/golden-coin-with-star-vector-illustration.jpg?s=612x612&w=0&k=20&c=oiTaDaruWtNyUWlYlbc4Nojd3H2soyPWhWPeIc5EzPE=')
 
     useEffect(() => {
         // Solana 네트워크 연결
@@ -170,16 +175,12 @@ function App() {
               const mint = new PublicKey(tokenAddress)
               console.log(mint);
 
-              /*
               const tokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
                 connection,
                 wallet,
                 mint,
                 wallet.publicKey
               )
-               */
-
-              const tokenAccount = new PublicKey("8Vt9PaoTUZayZjzvn2wuFZTx8WmXMAyAB9SieM5tnkdc")
 
               console.log(tokenAccount);
 
@@ -187,7 +188,7 @@ function App() {
                 connection,
                 wallet,
                 mint,
-                tokenAccount,
+                tokenAccount.address,
                 wallet,
                 amount,
               )
@@ -256,6 +257,20 @@ function App() {
         await sendAndConfirmTransaction(connection, transaction, [wallet]);
     }
 
+    const postRevokeMintToken = async () => {
+        const mint = new PublicKey(tokenAddress)
+
+        let transaction = new Transaction()
+            .add(splToken.createSetAuthorityInstruction(
+                mint,
+                wallet.publicKey,
+                splToken.AuthorityType.MintTokens,
+                wallet.publicKey,
+            ));
+
+        await sendAndConfirmTransaction(connection, transaction, [wallet]);
+    }
+
     const postDelegateMintToken = async () => {
       const mint = new PublicKey(tokenAddress);
       const delegateAccount = new PublicKey(delegateAddress);
@@ -292,40 +307,39 @@ function App() {
     const postTransferToken = async () => {
         const mint = new PublicKey(tokenAddress);
 
-        /*const fromAccount = await splToken.getOrCreateAssociatedTokenAccount(
+        const fromAccount = await splToken.getOrCreateAssociatedTokenAccount(
             connection,
             wallet,
             mint,
             wallet.publicKey
-        )*/
+        )
 
-        const fromAccount = new PublicKey("8Vt9PaoTUZayZjzvn2wuFZTx8WmXMAyAB9SieM5tnkdc");
-
-
-        const toAccount = await splToken.getOrCreateAssociatedTokenAccount(
+        /*const toAccount = await splToken.getOrCreateAssociatedTokenAccount(
             connection,
             wallet,
             mint,
             new PublicKey(toAddress)
-        )
+        )*/
 
-        //const toAccount = new PublicKey(tokenAddress);
+        const toAccount = new PublicKey(tokenAddress);
 
-        console.log(mint, fromAccount, toAccount);
+        //console.log(mint, fromAccount, toAccount.address);
 
         const transaction = await splToken.transfer(
             connection,
             wallet,
             fromAccount,
-            toAccount.address,
+            toAccount,
             wallet,
-            1
+            1000000
         );
         console.log(transaction);
         setTransactionId(transaction)
     }
 
     const postTransferTokenForSolana = async () => {
+        console.log(wallet.publicKey);
+        console.log(toAddress);
 
         let transaction = new Transaction().add(
             SystemProgram.transfer({
@@ -466,6 +480,16 @@ function App() {
         setFee(response.value);
     }
 
+    const createTokenMeta = async () => {
+        const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
+            'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
+        );
+
+
+    }
+
+
+
     const postTokenLockup = async () => {
         const seed = generateRandomSeed(); // prefer async mnemonicToSeed
         //const seed = 'asdacvqwasda321321435';
@@ -553,6 +577,26 @@ function App() {
         setWalletPassword(value);
     }
 
+    const onChangeTokenName = (e) => {
+        const { name, value }  = e.target;
+        setTokenName(value);
+    }
+
+    const onChangeTokenSymbol = (e) => {
+        const { name, value }  = e.target;
+        setTokenSymbol(value);
+    }
+
+    const onChangeTokenDescription = (e) => {
+        const { name, value }  = e.target;
+        setTokenDescription(value);
+    }
+
+    const onChangeTokenImage = (e) => {
+        const { name, value }  = e.target;
+        setTokenImage(value);
+    }
+
     return (
         <div className="App">
             <div className="contents">
@@ -585,10 +629,20 @@ function App() {
                 <div>balance: {balanceMintToken}</div>
             </div>
             <div className="contents">
+                <button onClick={createTokenMeta}>토큰 메타데이터 생성</button>
+                <input name="tokenName" placeholder="Name" value={tokenName} onChange={onChangeTokenName} />
+                <input name="tokenSymbol" placeholder="Symbol" value={tokenSymbol} onChange={onChangeTokenSymbol} />
+                <input name="tokenDescription" placeholder="Description" value={tokenDescription} onChange={onChangeTokenDescription} />
+                <input name="tokenImage" placeholder="Image" value={tokenImage} onChange={onChangeTokenImage} />
+            </div>
+            <div className="contents">
                 <button onClick={postBurnToken}>발행한 토큰 소각 - 1개</button>
             </div>
             <div className="contents">
                 <button onClick={postFreezeMintToken}>토큰 신규 발행 금지</button>
+            </div>
+            <div className="contents">
+                <button onClick={postRevokeMintToken}>토큰 Mint 리보크</button>
             </div>
             <div className="contents">
                 <button onClick={postTransferTokenForSolana}>솔라나 전송 - 1개</button>
